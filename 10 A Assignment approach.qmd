@@ -1,0 +1,16 @@
+---
+title: "10 A Sentiment Analysis"
+author: "Antik Salimullah"
+format: html
+editor: visual
+---
+
+# Approach
+
+For this assignment, I will first reproduce the sentiment analysis example from Chapter 2 of *Text Mining with R*, using Jane Austen's novels and the sentiment lexicons introduced in the book.
+
+I will then extend the analysis by using two ESPN articles covering the New York Giants during the 2026 NFL season. One article focuses on Jaxson Dart's talent and potential, while the other discusses his knee injury and its impact on the team.
+
+I plan to use the Bing lexicon to identify positive and negative sentiment and introduce VADER as an additional sentiment lexicon. I will compare the sentiment scores of both articles and visualize the results using R.
+
+Finally, I will discuss how the findings differ from the original Jane Austen example and whether the choice of sentiment lexicon affects the interpretation of the articles.
