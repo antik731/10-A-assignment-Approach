@@ -1,0 +1,168 @@
+---
+title: "10 A Assignment"
+author: "Antik Salimullah"
+format: html
+editor: visual
+---
+
+## Jane Austen Sentiment Analysis 
+
+```{r}
+library(janeaustenr)
+library(dplyr)
+library(stringr)
+library(tidytext)
+library(tidyr)
+library(textdata)
+
+tidy_books <- austen_books() %>%
+  group_by(book) %>%
+  mutate(
+    linenumber = row_number(),
+    chapter = cumsum(str_detect(text, 
+                                regex("^chapter [\\divxlc]", 
+                                      ignore_case = TRUE)))) %>%
+  ungroup() %>%
+  unnest_tokens(word, text)
+```
+
+```{r}
+nrc_joy <- get_sentiments("nrc") %>% 
+  filter(sentiment == "joy")
+
+tidy_books %>%
+  filter(book == "Emma") %>%
+  inner_join(nrc_joy) %>%
+  count(word, sort = TRUE)
+```
+
+```{r}
+library(tidyr)
+
+jane_austen_sentiment <- tidy_books %>%
+  inner_join(get_sentiments("bing")) %>%
+  count(book, index = linenumber %/% 80, sentiment) %>%
+  pivot_wider(names_from = sentiment, values_from = n, values_fill = 0) %>% 
+  mutate(sentiment = positive - negative)
+```
+
+```{r}
+library(ggplot2)
+
+ggplot(jane_austen_sentiment, aes(index, sentiment, fill = book)) +
+  geom_col(show.legend = FALSE) +
+  facet_wrap(~book, ncol = 2, scales = "free_x")
+```
+
+# Citation for the above code
+
+Silge, Julia, and David Robinson. 2017. Text Mining with R: A Tidy Approach. O'Reilly Media.
+
+Original code: <https://www.tidytextmining.com/sentiment>
+
+# Load Giants ESPN Articles
+
+```{r}
+library(tidyverse)
+library(tidytext)
+
+giants_talent <- read_lines("Jaxson_Dart_all_angles .txt")
+giants_injury <- read_lines("dart_knee_surgery.txt")
+```
+
+#  Tokenize the Articles
+
+```{r}
+giants_text <- tibble(
+  article = c(
+    rep("Talent", length(giants_talent)),
+    rep("Injury", length(giants_injury))
+  ),
+  text = c(giants_talent, giants_injury)
+)
+
+giants_tidy <- giants_text %>%
+  unnest_tokens(word, text)
+```
+
+# Identify Positive and Negative words
+
+```{r}
+giants_bing <- giants_tidy %>%
+  inner_join(get_sentiments("bing"), by = "word")
+
+giants_bing %>%
+  count(article, sentiment)
+```
+
+# Sentiment Metrics
+
+```{r}
+giants_sentiment <- giants_bing %>%
+  count(article, sentiment) %>%
+  pivot_wider(
+    names_from = sentiment,
+    values_from = n,
+    values_fill = 0
+  ) %>%
+  mutate(sentiment_score = positive - negative)
+
+giants_sentiment
+```
+
+# Visualize
+
+```{r}
+library(ggplot2)
+
+ggplot(giants_sentiment,
+       aes(x = article, y = sentiment_score, fill = article)) +
+  geom_col() +
+  labs(
+    title = "Sentiment Analysis of ESPN Giants Articles",
+    x = "Article",
+    y = "Sentiment Score (Positive - Negative)"
+  ) +
+  theme_minimal() +
+  guides(fill = "none")
+```
+
+# Using Vader (lexicon) for Sentiment 
+
+```{r}
+library(vader)
+
+giants_vader <- vader_df(c(
+  paste(giants_talent, collapse = " "),
+  paste(giants_injury, collapse = " ")
+))
+
+giants_vader <- giants_vader %>%
+  mutate(article = c("Talent", "Injury")) %>%
+  select(article, compound, pos, neg, neu)
+
+giants_vader
+```
+
+# Comparing Vader and Bing
+
+```{r}
+sentiment_comparison <- giants_sentiment %>%
+  select(article, bing_score = sentiment_score) %>%
+  left_join(
+    giants_vader %>%
+      mutate(vader_net = pos - neg) %>%
+      select(article, compound, vader_net),
+    by = "article"
+  )
+
+sentiment_comparison
+```
+
+# Discussion and Findings
+
+The sentiment analysis shows that both ESPN articles contain more positive than negative language. Using the Bing lexicon, the article discussing Jaxson Dart's talent received a sentiment score of +57, compared to +7 for the article discussing his injury.
+
+VADER produced similar findings, with positive-minus-negative scores of 0.121 for the talent article and 0.017 for the injury article. Both methods suggest that the talent article contains more positive language.
+
+One limitation is that the articles may differ in length, which affects raw Bing scores. Additionally, sentiment analysis does not always capture the full context of sports journalism.
